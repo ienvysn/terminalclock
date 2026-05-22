@@ -173,3 +173,57 @@ def parse_duration(s):
     except ValueError:
         return None
 
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        prog='clock',
+        description='Terminal clock / stopwatch / countdown timer',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+duration formats for -t:
+  5m          5 minutes
+  90s         90 seconds
+  1h30m       1 hour 30 minutes
+  1h30m20s    hours + minutes + seconds
+  1:30        MM:SS
+  1:30:00     HH:MM:SS
+  120         bare integer = seconds
+
+in-app keys:
+  tab / m     cycle modes  (clock → stopwatch → timer)
+  space       start / pause
+  l           lap                (stopwatch only)
+  r           reset
+  q / ESC     quit
+        """
+    )
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-c', '--clock',
+        action='store_true', help='start in clock mode (default)')
+    group.add_argument('-s', '--stop', '--stopwatch',
+        action='store_true', dest='stopwatch',
+        help='start in stopwatch mode')
+    group.add_argument('-t', '--timer', '--countdown',
+        metavar='DURATION',
+        help='start countdown timer  e.g.  -t 5m  -t 1h30m  -t 1:30')
+
+    args = parser.parse_args()
+
+    timer_ms = 0
+    if args.timer:
+        secs = parse_duration(args.timer)
+        if secs is None or secs <= 0:
+            print(f"error: cannot parse duration '{args.timer}'", file=sys.stderr)
+            print("examples:  5m  90s  1h30m  1:30  120", file=sys.stderr)
+            sys.exit(1)
+        timer_ms = secs * 1000
+
+    if args.stopwatch:
+        initial_mode = 'stopwatch'
+    elif args.timer:
+        initial_mode = 'timer'
+    else:
+        initial_mode = 'clock'
+
+    curses.wrapper(main, initial_mode, timer_ms)
